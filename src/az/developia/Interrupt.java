@@ -5,10 +5,10 @@ public class Interrupt {
         Runnable runnable = ()-> {
             try {
                 System.out.println("Hello");
-                if (Thread.currentThread().isInterrupted()){
-                    Thread.interrupted();
-                    throw new RuntimeException("interrupted");
-                }
+//                if (Thread.currentThread().isInterrupted()){
+//                    Thread.interrupted();
+//                    throw new RuntimeException("interrupted");
+//                }
             }catch (Exception e){
                 e.printStackTrace();
             }
