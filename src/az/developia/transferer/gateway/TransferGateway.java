@@ -8,12 +8,18 @@ import az.developia.transferer.bank.Bank;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class TransferGateway implements Transfer, Registerer {
     private List<Bank> registeredBanks;
+    private ReentrantLock transferLock;
+    private Condition balanceCondition;
 
     public TransferGateway() {
         this.registeredBanks = new ArrayList<>();
+        this.transferLock = new ReentrantLock();
+        this.balanceCondition = transferLock.newCondition();
     }
 
     public void transfer(Account from, Account to, Amount amount, int tries) {
@@ -35,8 +41,26 @@ public class TransferGateway implements Transfer, Registerer {
             checkAccountIsRegistered(to);
             checkBalance(from, amount);
 
-            from.changeBalance(amount, false);
-            to.changeBalance(amount, true);
+            try {
+                this.transferLock.lock();
+                // TODO critical part. Should syncronize
+                if (from.getBalance().getValue().compareTo(amount.getValue()) < 0) {
+                    try {
+                        balanceCondition.await();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        balanceCondition.signalAll();
+                    }
+                } else {
+                    balanceCondition.signalAll();
+                }
+                from.changeBalance(amount, false);
+                to.changeBalance(amount, true);
+
+            } finally {
+                this.transferLock.unlock();
+            }
+
 
             System.out.printf(threadInfo + " | Successfully transferred amount: %.2f | from account: %s | to account: %s%n",
                     amount.getValue(), from.getIban(), to.getIban());
