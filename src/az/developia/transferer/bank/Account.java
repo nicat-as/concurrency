@@ -23,11 +23,11 @@ public class Account {
 
     public void changeBalance(Amount payment, boolean isIncrease) {
         var signature = isIncrease ? 1 : -1;
-        var increasedBalance = this.balance.getValue()
+        var increasedOrDecreasedBalance = this.balance.getValue()
                 .add(payment.getValue()
                         .multiply(BigDecimal.valueOf(signature))
                 );
-        this.balance.setValue(increasedBalance);
+        this.balance.setValue(increasedOrDecreasedBalance);
     }
 
     @Override

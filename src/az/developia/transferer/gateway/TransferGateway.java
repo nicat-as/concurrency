@@ -15,6 +15,8 @@ public class TransferGateway implements Transfer, Registerer {
     private List<Bank> registeredBanks;
     private ReentrantLock transferLock;
     private Condition balanceCondition;
+    private Object myLock = new Object();
+    private Object mySecondLock = new Object();
 
     public TransferGateway() {
         this.registeredBanks = new ArrayList<>();
@@ -41,15 +43,14 @@ public class TransferGateway implements Transfer, Registerer {
             checkAccountIsRegistered(to);
             checkBalance(from, amount);
 
-            try {
-                this.transferLock.lock();
+            synchronized (myLock) {
                 // TODO critical part. Should syncronize
                 if (from.getBalance().getValue().compareTo(amount.getValue()) < 0) {
                     try {
-                        balanceCondition.await();
+                        myLock.wait(); //await
                     } catch (InterruptedException e) {
+                        myLock.notifyAll(); // signalAll
                         e.printStackTrace();
-                        balanceCondition.signalAll();
                     }
                 } else {
                     balanceCondition.signalAll();
@@ -57,11 +58,7 @@ public class TransferGateway implements Transfer, Registerer {
                 from.changeBalance(amount, false);
                 to.changeBalance(amount, true);
 
-            } finally {
-                this.transferLock.unlock();
             }
-
-
             System.out.printf(threadInfo + " | Successfully transferred amount: %.2f | from account: %s | to account: %s%n",
                     amount.getValue(), from.getIban(), to.getIban());
 
@@ -84,6 +81,9 @@ public class TransferGateway implements Transfer, Registerer {
     }
 
     private void checkAccountIsRegistered(Account account) {
+        synchronized (mySecondLock){
+            System.out.println("");
+        }
         var threadInfo = String.format("===Thread[%d]===", Thread.currentThread().getId());
         System.out.println(threadInfo + "Checking account registration start: " + account + " ===");
         AtomicBoolean isFound = new AtomicBoolean(false);

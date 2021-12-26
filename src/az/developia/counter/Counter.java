@@ -1,18 +1,26 @@
 package az.developia.counter;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Counter {
-    private Lock lock = new ReentrantLock();
-    private int number;
+    private AtomicInteger number = new AtomicInteger(0);
+    ThreadLocal<String> threadLocalString;
 
-    public int add() {
-        try {
-            lock.lock();
-            return ++this.number;
-        } finally {
-            lock.unlock();
-        }
+    public Counter() {
+        this.threadLocalString = new ThreadLocal<>();
+        this.threadLocalString.set("Initialize");
+    }
+
+    public synchronized int add() {
+        return number.addAndGet(1);
+    }
+
+    public void print(){
+        System.out.println(this.threadLocalString.get());
+    }
+    public void set(){
+        this.threadLocalString.set("Thread is" + Thread.currentThread().getId());
     }
 }
